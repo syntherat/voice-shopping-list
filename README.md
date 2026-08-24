@@ -243,4 +243,3 @@ Every icon in the interface is a lucide component — there are no emoji and no 
 SVG paths. Category icons are mapped in
 [`CategoryIcon`](src/components/CategoryIcon.jsx) rather than in the category data, so
 `lib/categories.js` stays plain data that tests can import without React.
-# voice-shopping-list
