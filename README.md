@@ -4,7 +4,7 @@ A voice-controlled shopping list. Speak naturally — "I need two bottles of mil
 bread" — and the app works out what you meant, sorts it into categories, and suggests what
 you are likely to have forgotten.
 
-**Live app:** _add your Render URL here after the first deploy_
+**Live app:** https://voice-shopping-list.onrender.com/
 
 **Docs:** [APPROACH.md](APPROACH.md) — the short write-up of how this was built and why
 (also supplied as `APPROACH.docx`).
