@@ -3,6 +3,7 @@ export default {
 
   intents: {
     CLEAR: ['vide ma liste', 'efface la liste', 'efface ma liste', 'supprime tout', 'efface tout'],
+    REPLACE: ['remplace', 'remplacer', 'echange', 'échange'],
     UPDATE_QUANTITY: ['change', 'modifie', 'mets a jour', 'mets à jour'],
     SEARCH: ['cherche', 'rechercher', 'recherche', 'trouve', 'montre moi', 'affiche'],
     REMOVE: ['je ne veux plus', 'enleve', 'enlève', 'supprime', 'retire', 'efface'],
@@ -44,8 +45,12 @@ export default {
     between: ['entre'],
   },
 
+  // Where the item sits relative to the verb.
+  objectPosition: 'after',
+
   rangeJoiners: ['et', 'a', 'à'],
   updateSeparators: ['a', 'à'],
+  replaceSeparators: ['par', 'avec'],
   conjunctions: ['et', 'ainsi que'],
   connectors: ['de', 'des', 'du'],
 

@@ -125,6 +125,69 @@ function removeItems(state, incoming) {
   return { ...state, items, feedback: feedback('success', message) }
 }
 
+// A swap keeps the old line's quantity unless a new one was spoken, so
+// "change maggi to kurkure" carries over however many maggi were on the list.
+function replaceItem(state, command) {
+  const incoming = command.items[0]
+  if (!command.target || !incoming?.name) {
+    return { ...state, feedback: feedback('error', 'Tell me what to swap, and what for') }
+  }
+
+  const target = findRemovalTarget(state.items, command.target)
+  if (!target) {
+    return { ...state, feedback: feedback('error', `${command.target} is not on your list`) }
+  }
+
+  const quantity = incoming.quantity ?? target.quantity
+  const unit = incoming.unit ?? (incoming.quantity == null ? target.unit : null)
+
+  // The replacement may already be on the list, in which case swapping into it
+  // should merge rather than leave two lines for the same product.
+  const remaining = state.items.filter((item) => item.id !== target.id)
+  const merge = findMergeTarget(remaining, { name: incoming.name, unit })
+
+  let items
+  let touchedId
+  let replacementName
+
+  if (merge) {
+    items = remaining.map((item) =>
+      item.id === merge.id
+        ? {
+            ...merge,
+            quantity: merge.quantity + quantity,
+            unit: merge.unit || unit,
+            checked: false,
+            updatedAt: Date.now(),
+          }
+        : item,
+    )
+    touchedId = merge.id
+    replacementName = merge.name
+  } else {
+    const replacement = createItem({ name: incoming.name, quantity, unit })
+    items = state.items.map((item) => (item.id === target.id ? replacement : item))
+    touchedId = replacement.id
+    replacementName = replacement.name
+  }
+
+  const entry = {
+    name: incoming.name,
+    quantity,
+    unit,
+    category: categorize(incoming.name),
+    at: Date.now(),
+  }
+
+  return {
+    ...state,
+    items,
+    lastTouchedId: touchedId,
+    history: [entry, ...state.history].slice(0, HISTORY_LIMIT),
+    feedback: feedback('success', `Swapped ${target.name} for ${replacementName}`),
+  }
+}
+
 function updateQuantity(state, incoming) {
   const entry = incoming[0]
   if (!entry || entry.quantity == null) {
@@ -174,6 +237,9 @@ export function applyCommand(state, command) {
         return { ...state, feedback: feedback('error', 'What would you like to remove?') }
       }
       return removeItems(state, command.items)
+
+    case INTENTS.REPLACE:
+      return replaceItem(state, command)
 
     case INTENTS.UPDATE_QUANTITY:
       return updateQuantity(state, command.items)

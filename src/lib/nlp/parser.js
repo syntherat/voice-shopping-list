@@ -27,11 +27,6 @@ function phraseRegExp(phrase, flags = 'u') {
   return new RegExp('(^|\\s)' + escapeRegExp(phrase) + '(?=\\s|,|$)', flags)
 }
 
-function stripPhrase(text, phrase) {
-  if (!phraseRegExp(phrase).test(text)) return null
-  return text.replace(phraseRegExp(phrase, 'gu'), '$1').replace(/\s+/g, ' ').trim()
-}
-
 function stripAll(text, phrases) {
   let out = text
   for (const phrase of phrases) {
@@ -40,11 +35,20 @@ function stripAll(text, phrases) {
   return out.replace(/\s+/g, ' ').trim()
 }
 
+// Returns the text on either side of the verb, because which side carries the
+// item depends on the language: English puts it after ("needs bread"), Hindi
+// before ("दूध जोड़ो").
 function matchIntent(text, locale) {
   for (const intent of INTENT_ORDER) {
     for (const phrase of locale.intents[intent] || []) {
-      const rest = stripPhrase(text, phrase)
-      if (rest !== null) return { intent, rest }
+      const match = text.match(phraseRegExp(phrase))
+      if (!match) continue
+      const start = match.index + match[1].length
+      return {
+        intent,
+        before: text.slice(0, start).trim(),
+        after: text.slice(start + phrase.length).trim(),
+      }
     }
   }
   return null
@@ -110,7 +114,14 @@ function extractQuantityAndUnit(segment, locale) {
   }
   if (after.length && locale.connectors.includes(after[0])) after.shift()
 
-  return { quantity, unit, rest: [...before, ...after].join(' ').trim() }
+  // The product normally follows the quantity — "10 kurkure" — and whatever
+  // sits in front of it is preamble: "my friend wants". Fall back to the
+  // leading words only when nothing usable follows, as in "rice 2 kg".
+  const afterText = after.join(' ').trim()
+  const beforeText = before.join(' ').trim()
+  const rest = cleanName(afterText, locale) ? afterText : beforeText
+
+  return { quantity, unit, rest }
 }
 
 function extractPriceFilters(text, locale) {
@@ -203,13 +214,31 @@ function buildUpdate(rest, locale) {
     const match = rest.match(new RegExp('^(.*)\\s' + escapeRegExp(separator) + '\\s(.+)$', 'u'))
     if (!match) continue
     const { quantity, unit } = extractQuantityAndUnit(match[2], locale)
-    if (quantity == null) continue
+    // "change milk to 3" sets a quantity; "change maggi to kurkure" does not,
+    // and is left for buildReplace to interpret.
+    if (quantity == null) return []
     return [{ name: cleanName(match[1], locale), quantity, unit }]
   }
 
   const { quantity, unit, rest: remainder } = extractQuantityAndUnit(rest, locale)
   if (quantity == null) return []
   return [{ name: cleanName(remainder, locale), quantity, unit }]
+}
+
+// "replace X with Y", "swap X for Y", "change X to Y". The quantity stays
+// null unless it was spoken, so the reducer can carry the old one over.
+function buildReplace(rest, locale) {
+  for (const separator of locale.replaceSeparators) {
+    const pattern = new RegExp('^(.*)\\s' + escapeRegExp(separator) + '\\s(.+)$', 'u')
+    const match = rest.match(pattern)
+    if (!match) continue
+    const target = cleanName(match[1], locale)
+    const { quantity, unit, rest: remainder } = extractQuantityAndUnit(match[2], locale)
+    const name = cleanName(remainder, locale)
+    if (!target || !name) continue
+    return { target, items: [{ name, quantity, unit }] }
+  }
+  return null
 }
 
 export function parseCommand(input, localeTag = 'en-US') {
@@ -220,6 +249,7 @@ export function parseCommand(input, localeTag = 'en-US') {
   const result = {
     intent: INTENTS.UNKNOWN,
     items: [],
+    target: null,
     query: null,
     filters: { minPrice: null, maxPrice: null, currency: null, tags: [] },
     confidence: 0,
@@ -234,7 +264,16 @@ export function parseCommand(input, localeTag = 'en-US') {
   const intent = match ? match.intent : INTENTS.ADD
   const explicit = Boolean(match)
 
-  let rest = match ? match.rest : normalized
+  // Everything on the far side of the verb is preamble — "my mum" in
+  // "my mum needs bread" — so only the side that carries the item is kept.
+  let rest = normalized
+  if (match) {
+    const [preferred, fallback] =
+      locale.objectPosition === 'before'
+        ? [match.before, match.after]
+        : [match.after, match.before]
+    rest = preferred || fallback
+  }
   rest = stripAll(rest, locale.fillers)
   rest = stripAll(rest, locale.listPhrases)
 
@@ -260,9 +299,22 @@ export function parseCommand(input, localeTag = 'en-US') {
     }
   }
 
+  if (intent === INTENTS.REPLACE) {
+    const replacement = buildReplace(rest, locale)
+    if (!replacement) return { ...result, intent, confidence: 0.3 }
+    return { ...result, intent, ...replacement, confidence: 0.9 }
+  }
+
   if (intent === INTENTS.UPDATE_QUANTITY) {
     const items = buildUpdate(rest, locale)
-    return { ...result, intent, items, confidence: items.length ? 0.9 : 0.3 }
+    if (items.length) return { ...result, intent, items, confidence: 0.9 }
+
+    // "change maggi to kurkure" reads as an update but means a swap.
+    const replacement = buildReplace(rest, locale)
+    if (replacement) {
+      return { ...result, intent: INTENTS.REPLACE, ...replacement, confidence: 0.9 }
+    }
+    return { ...result, intent, confidence: 0.3 }
   }
 
   const items = buildItems(splitSegments(rest, locale), locale)

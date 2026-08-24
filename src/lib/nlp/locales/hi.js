@@ -38,8 +38,12 @@ export default {
     between: [],
   },
 
+  // Where the item sits relative to the verb.
+  objectPosition: 'before',
+
   rangeJoiners: ['और'],
   updateSeparators: [],
+  replaceSeparators: [],
   conjunctions: ['और'],
   connectors: [],
 

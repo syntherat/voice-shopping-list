@@ -3,6 +3,7 @@ export default {
 
   intents: {
     CLEAR: ['borra la lista', 'limpia la lista', 'vacia la lista', 'vacía la lista', 'borra todo', 'elimina todo'],
+    REPLACE: ['reemplaza', 'reemplazar', 'sustituye', 'sustituir'],
     UPDATE_QUANTITY: ['cambia', 'cambiar', 'actualiza'],
     SEARCH: ['busca', 'buscar', 'encuentra', 'muestrame', 'muéstrame', 'enseñame', 'enséñame'],
     REMOVE: ['ya no necesito', 'no necesito', 'quita', 'quitar', 'elimina', 'borra', 'saca', 'retira'],
@@ -46,8 +47,12 @@ export default {
     between: ['entre'],
   },
 
+  // Where the item sits relative to the verb.
+  objectPosition: 'after',
+
   rangeJoiners: ['y', 'a'],
   updateSeparators: ['a'],
+  replaceSeparators: ['por', 'con'],
   conjunctions: ['y', 'e', 'tambien', 'también'],
   connectors: ['de', 'del'],
 

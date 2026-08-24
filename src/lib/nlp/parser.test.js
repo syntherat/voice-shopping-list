@@ -277,3 +277,78 @@ describe('french', () => {
     expect(parseCommand('enlève le lait de ma liste', 'fr-FR').intent).toBe(INTENTS.REMOVE)
   })
 })
+
+describe('replacing an item', () => {
+  it.each([
+    ['replace milk with almond milk', 'milk', 'almond milk'],
+    ['swap maggi for kurkure', 'maggi', 'kurkure'],
+    ['change a maggi to kurkure', 'maggi', 'kurkure'],
+    ['can you change the bread to croissants', 'bread', 'croissants'],
+    ['substitute butter with olive oil', 'butter', 'olive oil'],
+  ])('reads %s', (text, target, name) => {
+    const result = parseCommand(text)
+    expect(result.intent).toBe(INTENTS.REPLACE)
+    expect(result.target).toBe(target)
+    expect(result.items[0].name).toBe(name)
+  })
+
+  it('leaves the quantity unset when none is spoken', () => {
+    expect(firstItem('replace milk with oat milk').quantity).toBeNull()
+  })
+
+  it('keeps a spoken quantity and unit', () => {
+    expect(firstItem('replace milk with 2 bottles of oat milk')).toEqual({
+      name: 'oat milk',
+      quantity: 2,
+      unit: 'bottle',
+    })
+  })
+
+  it('still reads a quantity change as an update', () => {
+    expect(parseCommand('change milk to 3').intent).toBe(INTENTS.UPDATE_QUANTITY)
+  })
+
+  it('reports low confidence when only one side is given', () => {
+    const result = parseCommand('replace milk')
+    expect(result.intent).toBe(INTENTS.REPLACE)
+    expect(result.confidence).toBeLessThan(0.5)
+  })
+
+  it('replaces in spanish', () => {
+    expect(parseCommand('reemplaza la leche por leche de almendras', 'es-ES')).toMatchObject({
+      intent: INTENTS.REPLACE,
+      target: 'leche',
+      items: [{ name: 'leche de almendras' }],
+    })
+  })
+
+  it('replaces in french', () => {
+    expect(parseCommand('remplace le pain par des croissants', 'fr-FR')).toMatchObject({
+      intent: INTENTS.REPLACE,
+      target: 'pain',
+      items: [{ name: 'croissants' }],
+    })
+  })
+})
+
+describe('subjects and preamble', () => {
+  it.each([
+    ['my friend wants 10 kurkure', 'kurkure', 10],
+    ['she needs 2 bottles of water', 'water', 2],
+    ['we want 3 apples', 'apples', 3],
+    ['my mum needs bread', 'bread', 1],
+    ['can you please add 5 oranges for me', 'oranges', 5],
+  ])('strips the subject in %s', (text, name, quantity) => {
+    const item = firstItem(text)
+    expect(item.name).toBe(name)
+    expect(item.quantity).toBe(quantity)
+  })
+
+  it('keeps the leading words when nothing follows the quantity', () => {
+    expect(firstItem('add rice 2 kg')).toEqual({ name: 'rice', quantity: 2, unit: 'kg' })
+  })
+
+  it('does not mistake a removal for an addition', () => {
+    expect(parseCommand("i don't need eggs").intent).toBe(INTENTS.REMOVE)
+  })
+})

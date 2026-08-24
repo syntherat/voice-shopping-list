@@ -1,3 +1,5 @@
+import { matchKey } from './itemKey'
+
 export const CATEGORIES = [
   { id: 'produce', label: 'Produce' },
   { id: 'dairy', label: 'Dairy & Eggs' },
@@ -29,12 +31,23 @@ const ITEM_CATEGORIES = {
   cucumber: 'produce', pepper: 'produce', peppers: 'produce', mushroom: 'produce',
   mushrooms: 'produce', celery: 'produce', corn: 'produce', peas: 'produce',
   beans: 'produce', coriander: 'produce', cilantro: 'produce', chilli: 'produce',
-  herbs: 'produce', salad: 'produce',
+  herbs: 'produce', salad: 'produce', plum: 'produce', melon: 'produce',
+  blackberry: 'produce', raspberry: 'produce', cherry: 'produce',
+  sweetcorn: 'produce', courgette: 'produce', zucchini: 'produce',
+  asparagus: 'produce', radish: 'produce', rhubarb: 'produce',
+  watercress: 'produce', 'spring onion': 'produce', 'spring green': 'produce',
+  'brussels sprout': 'produce', parsnip: 'produce', cranberry: 'produce',
+  clementine: 'produce', pumpkin: 'produce', squash: 'produce', kale: 'produce',
+  leek: 'produce', grapefruit: 'produce', pomegranate: 'produce',
+  beetroot: 'produce', 'sweet potato': 'produce', 'green bean': 'produce',
+  aubergine: 'produce', eggplant: 'produce', okra: 'produce', 'lady finger': 'produce',
 
   milk: 'dairy', butter: 'dairy', cheese: 'dairy', yogurt: 'dairy', yoghurt: 'dairy',
   cream: 'dairy', curd: 'dairy', paneer: 'dairy', egg: 'dairy', eggs: 'dairy',
   ghee: 'dairy', margarine: 'dairy', 'cream cheese': 'dairy', 'sour cream': 'dairy',
   'almond milk': 'dairy', 'soy milk': 'dairy', 'oat milk': 'dairy',
+  'greek yogurt': 'dairy', 'coconut cream': 'dairy', 'vegan cheese': 'dairy',
+  lassi: 'dairy', buttermilk: 'dairy', 'condensed milk': 'dairy',
 
   bread: 'bakery', bun: 'bakery', buns: 'bakery', bagel: 'bakery', bagels: 'bakery',
   croissant: 'bakery', croissants: 'bakery', muffin: 'bakery', muffins: 'bakery',
@@ -54,6 +67,14 @@ const ITEM_CATEGORIES = {
   ketchup: 'pantry', mayonnaise: 'pantry', mustard: 'pantry', sauce: 'pantry',
   soup: 'pantry', stock: 'pantry', 'baking powder': 'pantry', yeast: 'pantry',
   quinoa: 'pantry', couscous: 'pantry', 'coconut milk': 'pantry',
+  tofu: 'pantry', jaggery: 'pantry', gur: 'pantry', stevia: 'pantry',
+  maggi: 'pantry', ramen: 'pantry', 'instant noodles': 'pantry',
+  atta: 'pantry', maida: 'pantry', suji: 'pantry', rava: 'pantry',
+  besan: 'pantry', poha: 'pantry', sabudana: 'pantry', upma: 'pantry',
+  rajma: 'pantry', chana: 'pantry', 'chana dal': 'pantry', moong: 'pantry',
+  'moong dal': 'pantry', 'toor dal': 'pantry', 'urad dal': 'pantry',
+  jeera: 'pantry', haldi: 'pantry', dhania: 'pantry', 'garam masala': 'pantry',
+  achar: 'pantry', pickle: 'pantry', 'idli batter': 'pantry', 'dosa batter': 'pantry',
 
   'ice cream': 'frozen', 'frozen pizza': 'frozen', 'frozen peas': 'frozen',
   'fish fingers': 'frozen', 'french fries': 'frozen',
@@ -67,6 +88,9 @@ const ITEM_CATEGORIES = {
   chocolate: 'snacks', candy: 'snacks', sweets: 'snacks', nuts: 'snacks',
   almonds: 'snacks', cashews: 'snacks', popcorn: 'snacks', crackers: 'snacks',
   pretzels: 'snacks', granola: 'snacks', 'granola bars': 'snacks',
+  kurkure: 'snacks', namkeen: 'snacks', bhujia: 'snacks', sev: 'snacks',
+  papad: 'snacks', mathri: 'snacks', 'dark chocolate': 'snacks',
+  wafers: 'snacks', 'protein bar': 'snacks',
 
   detergent: 'household', soap: 'household', 'dish soap': 'household',
   'washing powder': 'household', bleach: 'household', 'toilet paper': 'household',
@@ -92,6 +116,19 @@ const ITEM_CATEGORIES = {
   arroz: 'pantry', manzanas: 'produce', 'plátanos': 'produce', agua: 'beverages',
   lait: 'dairy', oeufs: 'dairy', fromage: 'dairy', pommes: 'produce',
   riz: 'pantry', eau: 'beverages',
+}
+
+// Plurals are unpredictable in the table above, so every key is also indexed
+// by its singular form. That way "peaches" finds "peach" and "grape" finds
+// "grapes" without listing both spellings by hand.
+const SINGULAR_INDEX = {}
+for (const [key, value] of Object.entries(ITEM_CATEGORIES)) {
+  const singular = matchKey(key)
+  if (!(singular in SINGULAR_INDEX)) SINGULAR_INDEX[singular] = value
+}
+
+function lookup(phrase) {
+  return ITEM_CATEGORIES[phrase] || SINGULAR_INDEX[matchKey(phrase)] || null
 }
 
 // Checked before the lookup table so "frozen peas" beats "peas".
@@ -120,15 +157,16 @@ export function categorize(name) {
     if (rule.test.test(text)) return rule.category
   }
 
-  if (ITEM_CATEGORIES[text]) return ITEM_CATEGORIES[text]
+  const direct = lookup(text)
+  if (direct) return direct
 
   // Scanned right to left because the head noun comes last: "mango juice" is
   // a drink, not produce.
   const tokens = text.split(/\s+/)
   for (let size = 2; size >= 1; size -= 1) {
     for (let i = tokens.length - size; i >= 0; i -= 1) {
-      const phrase = tokens.slice(i, i + size).join(' ')
-      if (ITEM_CATEGORIES[phrase]) return ITEM_CATEGORIES[phrase]
+      const found = lookup(tokens.slice(i, i + size).join(' '))
+      if (found) return found
     }
   }
 

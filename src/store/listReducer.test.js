@@ -178,3 +178,71 @@ describe('direct list actions', () => {
     expect(listReducer(seeded, { type: 'dismissFeedback' }).feedback).toBeNull()
   })
 })
+
+describe('replacing an item', () => {
+  it('swaps one item for another', () => {
+    const state = run(runAll(['add maggi', 'add milk']), 'change maggi to kurkure')
+    expect(names(state)).toEqual(['kurkure', 'milk'])
+  })
+
+  it('keeps the old quantity when none is spoken', () => {
+    const state = run(runAll(['add 3 maggi']), 'replace maggi with kurkure')
+    expect(state.items[0]).toMatchObject({ name: 'kurkure', quantity: 3 })
+  })
+
+  it('uses a spoken quantity instead', () => {
+    const state = run(runAll(['add 3 maggi']), 'replace maggi with 2 kurkure')
+    expect(state.items[0]).toMatchObject({ name: 'kurkure', quantity: 2 })
+  })
+
+  it('keeps the replacement in the same position', () => {
+    const state = run(runAll(['add milk', 'add maggi', 'add bread']), 'swap maggi for kurkure')
+    expect(names(state)).toEqual(['milk', 'kurkure', 'bread'])
+  })
+
+  it('categorises the replacement', () => {
+    const state = run(runAll(['add maggi']), 'change maggi to kurkure')
+    expect(state.items[0].category).toBe('snacks')
+  })
+
+  it('records the replacement in history', () => {
+    const state = run(runAll(['add maggi']), 'change maggi to kurkure')
+    expect(state.history[0]).toMatchObject({ name: 'kurkure' })
+  })
+
+  it('reports an item that is not on the list', () => {
+    const state = run(runAll(['add milk']), 'replace maggi with kurkure')
+    expect(state.feedback).toMatchObject({ tone: 'error', message: 'maggi is not on your list' })
+    expect(names(state)).toEqual(['milk'])
+  })
+
+  it('confirms the swap', () => {
+    const state = run(runAll(['add maggi']), 'change maggi to kurkure')
+    expect(state.feedback).toMatchObject({ tone: 'success', message: 'Swapped maggi for kurkure' })
+  })
+
+  it('lets the next command target the replacement', () => {
+    const state = run(run(runAll(['add maggi']), 'change maggi to kurkure'), 'make it 4')
+    expect(state.items[0]).toMatchObject({ name: 'kurkure', quantity: 4 })
+  })
+})
+
+describe('subjects in spoken commands', () => {
+  it('adds what was asked for, not who asked', () => {
+    const state = run(initialState, 'my friend wants 10 kurkure')
+    expect(state.items[0]).toMatchObject({ name: 'kurkure', quantity: 10, category: 'snacks' })
+  })
+})
+
+describe('replacing onto an item already on the list', () => {
+  it('merges instead of creating a second line', () => {
+    const state = run(runAll(['add 10 kurkure', 'add 2 maggi']), 'change maggi to kurkure')
+    expect(names(state)).toEqual(['kurkure'])
+    expect(state.items[0].quantity).toBe(12)
+  })
+
+  it('still removes the item that was swapped out', () => {
+    const state = run(runAll(['add kurkure', 'add maggi', 'add milk']), 'swap maggi for kurkure')
+    expect(names(state)).toEqual(['kurkure', 'milk'])
+  })
+})

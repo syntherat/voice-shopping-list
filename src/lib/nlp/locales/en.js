@@ -8,6 +8,7 @@ export default {
       'start over', 'start again', 'delete everything', 'remove everything',
       'remove all items', 'delete all items', 'remove all', 'delete all',
     ],
+    REPLACE: ['replace', 'swap out', 'swap', 'switch out', 'switch', 'substitute'],
     UPDATE_QUANTITY: ['change', 'update', 'make it', 'set'],
     SEARCH: [
       'search for', 'search', 'find me', 'find', 'look for', 'look up',
@@ -20,7 +21,9 @@ export default {
     ADD: [
       'add', 'i need to buy', 'i have to buy', 'i want to buy', 'i need',
       'i want', 'i would like', 'id like', 'we need', 'put', 'buy',
-      'get me', 'pick up', 'grab', 'include', 'append', 'get',
+      'get me', 'pick up', 'grab', 'include', 'append', 'order', 'get',
+      // Bare verbs so any subject works: "my friend wants", "she needs".
+      'wants', 'want', 'needs', 'need',
     ],
   },
 
@@ -106,8 +109,12 @@ export default {
     between: ['between', 'from'],
   },
 
+  // Where the item sits relative to the verb.
+  objectPosition: 'after',
+
   rangeJoiners: ['and', 'to'],
   updateSeparators: ['to'],
+  replaceSeparators: ['with', 'for', 'into', 'by', 'to'],
   conjunctions: ['and', 'plus', 'as well as', 'along with'],
   connectors: ['of'],
 
@@ -127,6 +134,6 @@ export default {
   stopwords: [
     'the', 'a', 'an', 'some', 'any', 'my', 'me', 'more', 'it', 'that', 'this',
     'to', 'from', 'on', 'for', 'in', 'of', 'and', 'please', 'list', 'items',
-    'item', 'we', 'i',
+    'item', 'we', 'i', 'those', 'these', 'one', 'ones',
   ],
 }
