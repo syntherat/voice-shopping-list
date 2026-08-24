@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+@theme {
+  --color-surface: #0f1115;
+  --color-surface-raised: #171a21;
+  --color-border-subtle: #262b36;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-surface);
+  color: #e6e8ec;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
+}
+
+:focus-visible {
+  outline: 2px solid #10b981;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Darker backdrop behind the device frame on a desktop, so the phone-sized
+   column reads as a device rather than a narrow page. */
+@media (min-width: 1024px) {
+  body {
+    background-color: #08090c;
+  }
+}
+
+/* The suggestion rail is swiped, not dragged by a scrollbar. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
