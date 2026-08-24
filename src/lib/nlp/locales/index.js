@@ -41,6 +41,8 @@ function combine(locale, fallback) {
     rangeJoiners: mergeLists(locale.rangeJoiners, fallback.rangeJoiners),
     updateSeparators: mergeLists(locale.updateSeparators, fallback.updateSeparators),
     replaceSeparators: mergeLists(locale.replaceSeparators, fallback.replaceSeparators),
+    forwardReplace: mergeLists(locale.forwardReplace, fallback.forwardReplace),
+    reversedReplace: mergeLists(locale.reversedReplace, fallback.reversedReplace),
     conjunctions: mergeLists(locale.conjunctions, fallback.conjunctions),
     connectors: mergeLists(locale.connectors, fallback.connectors),
     listPhrases: mergeLists(locale.listPhrases, fallback.listPhrases),

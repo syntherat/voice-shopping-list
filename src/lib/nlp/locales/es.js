@@ -47,6 +47,9 @@ export default {
     between: ['entre'],
   },
 
+  forwardReplace: [],
+  reversedReplace: ['en vez de', 'en lugar de'],
+
   // Where the item sits relative to the verb.
   objectPosition: 'after',
 
@@ -61,7 +64,8 @@ export default {
     'de mi lista', 'en mi lista', 'a la lista', 'de la lista', 'mi lista', 'la lista',
   ],
 
-  fillers: ['por favor', 'porfavor'],
+  fillers: [
+    'en vez de eso', 'en su lugar','por favor', 'porfavor'],
 
   stopwords: [
     'el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas', 'de', 'del', 'al',

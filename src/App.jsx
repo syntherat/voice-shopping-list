@@ -14,7 +14,7 @@ import { useSpeechRecognition } from './hooks/useSpeechRecognition'
 import { useSpeechSynthesis } from './hooks/useSpeechSynthesis'
 import { effectivePrice, hasSearchCriteria, loadCatalog, searchCatalog } from './lib/catalog'
 import { INTENTS } from './lib/nlp/intents'
-import { parseCommand } from './lib/nlp/parser'
+import { parseCommands } from './lib/nlp/parser'
 import { DEFAULT_LANGUAGE } from './lib/speech'
 import { getSuggestions } from './lib/suggestions'
 import { useShoppingList } from './store/useShoppingList'
@@ -105,16 +105,15 @@ export default function App() {
 
   const handleCommand = useCallback(
     (text) => {
-      const parsed = parseCommand(text, language)
-      setLastCommand({ text, parsed })
+      const commands = parseCommands(text, language)
+      setLastCommand({ text, commands })
 
-      if (parsed.intent === INTENTS.SEARCH) {
-        runSearch(parsed)
-        return
-      }
+      const searching = commands.find((command) => command.intent === INTENTS.SEARCH)
+      const listChanges = commands.filter((command) => command.intent !== INTENTS.SEARCH)
 
-      setSearch(null)
-      dispatch({ type: 'command', command: parsed })
+      if (listChanges.length) dispatch({ type: 'commands', commands: listChanges })
+      if (searching) runSearch(searching)
+      else setSearch(null)
     },
     [dispatch, language, runSearch],
   )

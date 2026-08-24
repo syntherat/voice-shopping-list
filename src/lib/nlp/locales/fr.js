@@ -45,6 +45,9 @@ export default {
     between: ['entre'],
   },
 
+  forwardReplace: [],
+  reversedReplace: ['au lieu de', 'a la place de', 'à la place de'],
+
   // Where the item sits relative to the verb.
   objectPosition: 'after',
 
@@ -59,7 +62,8 @@ export default {
     'a ma liste', 'à ma liste', 'de ma liste', 'sur ma liste', 'ma liste', 'la liste',
   ],
 
-  fillers: ['sil vous plait', 'sil vous plaît', 'stp', 'svp'],
+  fillers: [
+    'au lieu de ca', 'au lieu de ça', 'a sa place','sil vous plait', 'sil vous plaît', 'stp', 'svp'],
 
   stopwords: [
     'le', 'la', 'les', 'un', 'une', 'des', 'du', 'de', 'a', 'à', 'mon', 'ma',

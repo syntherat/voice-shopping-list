@@ -98,6 +98,18 @@ the product normally follows the number, so `10 kurkure` yields `kurkure`.
 `change X to Y` is decided by what follows the separator — a number is a quantity update,
 a product name is a swap.
 
+A swap can also be marked without a swap verb, and the marker decides which operand is
+which. English names the replacement first ("almond milk **instead of** milk"); Hindi names
+the target first ("मैगी **की जगह** कुरकुरे"). Hindi's other form, "मैगी **को** कुरकुरे **से** बदल दो",
+is handled by the same separator logic.
+
+**One sentence can carry several instructions.** `parseCommands` splits on the second verb,
+so "remove milk and add almond milk" becomes two commands, while "add milk, eggs and bread"
+stays one command with three items — the difference is whether a verb follows the *and*.
+Verb-first languages start a clause at the verb, verb-final ones end it there, so
+"दूध हटाओ और ब्रेड जोड़ो" splits correctly too. The clauses apply in order and report as a
+single confirmation.
+
 Non-English lexicons **inherit the English one as a fallback**, because people code-switch
 constantly — English product names inside a Hindi sentence, or just saying "add" with
 Spanish selected.
@@ -140,6 +152,8 @@ product: "चावल 500 रुपये से कम ढूंढो" return
 | `replace milk with almond milk` / `swap maggi for kurkure` | swaps one item for another |
 | `change apples to 3` / `make it 5` | updates quantity |
 | `my friend wants 10 kurkure` | any subject works; only the item is added |
+| `remove milk and add almond milk` | two instructions in one sentence |
+| `add almond milk instead of milk` | swap, either word order |
 | `clear my list` / `start over` | empties the list |
 | `find organic apples under $5` | search with tag and price |
 | `show me apples between 2 and 5 dollars` | price range |
@@ -148,7 +162,7 @@ product: "चावल 500 रुपये से कम ढूंढो" return
 
 | Language | Example |
 |---|---|
-| हिन्दी | `दो सेब जोड़ो` · `मुझे दूध चाहिए` · `चावल 500 रुपये से कम ढूंढो` |
+| हिन्दी | `दो सेब जोड़ो` · `मुझे दूध चाहिए` · `चावल 500 रुपये से कम ढूंढो` · `मैगी की जगह कुरकुरे डालो` |
 | Español | `agrega dos botellas de leche` · `busca manzanas menos de 5 dolares` |
 | Français | `ajoute deux bouteilles de lait` · `cherche des pommes moins de 5 euros` |
 
@@ -212,8 +226,6 @@ rendered component or a microphone to verify.
 - **Confirmation messages are English templates** in every language — a Hindi user hears
   "Added दूध". The item name is right, the surrounding words are not.
 - **Seasonal produce is northern-hemisphere** and not configurable.
-- **Item swaps are English, Spanish and French only.** Hindi's "X की जगह Y" construction is
-  not parsed yet; the English phrasing still works in Hindi mode through lexicon inheritance.
 - **Prices are static sample data** in USD; currency conversion uses fixed reference rates.
 - **Brand is matched through the query text**, not as a separate structured filter.
 - Recognition accuracy for non-English languages depends entirely on the browser's engine.

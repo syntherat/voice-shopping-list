@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { INTENTS } from './intents'
-import { normalize, parseCommand } from './parser'
+import { normalize, parseCommand, parseCommands } from './parser'
 
 const firstItem = (text, locale) => parseCommand(text, locale).items[0]
 
@@ -350,5 +350,112 @@ describe('subjects and preamble', () => {
 
   it('does not mistake a removal for an addition', () => {
     expect(parseCommand("i don't need eggs").intent).toBe(INTENTS.REMOVE)
+  })
+})
+
+describe('compound commands', () => {
+  const intents = (text, locale) => parseCommands(text, locale).map((command) => command.intent)
+
+  it('splits a removal and an addition', () => {
+    const [remove, add] = parseCommands('remove milk and add almond milk')
+    expect(remove).toMatchObject({ intent: INTENTS.REMOVE, items: [{ name: 'milk' }] })
+    expect(add).toMatchObject({ intent: INTENTS.ADD, items: [{ name: 'almond milk' }] })
+  })
+
+  it.each([
+    'can you remove milk and in its place add almond milk',
+    'can you remove milk and instead of that add almond milk',
+  ])('handles %s', (text) => {
+    const commands = parseCommands(text)
+    expect(commands.map((command) => command.intent)).toEqual([INTENTS.REMOVE, INTENTS.ADD])
+    expect(commands[0].items[0].name).toBe('milk')
+    expect(commands[1].items[0].name).toBe('almond milk')
+  })
+
+  it('keeps a single multi-item add as one command', () => {
+    expect(intents('add milk, eggs and bread')).toEqual([INTENTS.ADD])
+    expect(parseCommands('add milk, eggs and bread')[0].items).toHaveLength(3)
+  })
+
+  it('keeps a quantity list as one command', () => {
+    expect(intents('add 2 bottles of water and 5 oranges')).toEqual([INTENTS.ADD])
+  })
+
+  it('handles three clauses', () => {
+    expect(intents('add bread and remove milk and clear my list')).toEqual([
+      INTENTS.ADD,
+      INTENTS.REMOVE,
+      INTENTS.CLEAR,
+    ])
+  })
+
+  it('splits a verb-final language after the verb', () => {
+    const commands = parseCommands('दूध हटाओ और ब्रेड जोड़ो', 'hi-IN')
+    expect(commands.map((command) => command.intent)).toEqual([INTENTS.REMOVE, INTENTS.ADD])
+    expect(commands[0].items[0].name).toBe('दूध')
+    expect(commands[1].items[0].name).toBe('ब्रेड')
+  })
+
+  it('returns a single command for a single instruction', () => {
+    expect(parseCommands('add milk')).toHaveLength(1)
+  })
+
+  it('never returns an empty list', () => {
+    expect(parseCommands('   ')).toHaveLength(1)
+  })
+})
+
+describe('instead-of wording', () => {
+  it.each([
+    ['add almond milk instead of milk', 'milk', 'almond milk'],
+    ['instead of milk add almond milk', 'milk', 'almond milk'],
+    ['get oat milk rather than milk', 'milk', 'oat milk'],
+  ])('reads %s as a swap', (text, target, name) => {
+    const [command] = parseCommands(text)
+    expect(command.intent).toBe(INTENTS.REPLACE)
+    expect(command.target).toBe(target)
+    expect(command.items[0].name).toBe(name)
+  })
+
+  it('does not fire on a plain add', () => {
+    expect(parseCommand('add almond milk').intent).toBe(INTENTS.ADD)
+  })
+})
+
+describe('hindi swaps', () => {
+  it.each([
+    ['मैगी की जगह कुरकुरे डाल दो', 'मैगी', 'कुरकुरे'],
+    ['मैगी की जगह कुरकुरे', 'मैगी', 'कुरकुरे'],
+    ['मैगी के बदले कुरकुरे जोड़ो', 'मैगी', 'कुरकुरे'],
+    ['मैगी को कुरकुरे से बदल दो', 'मैगी', 'कुरकुरे'],
+    ['दूध को बादाम दूध से बदलो', 'दूध', 'बादाम दूध'],
+  ])('reads %s', (text, target, name) => {
+    const [command] = parseCommands(text, 'hi-IN')
+    expect(command.intent).toBe(INTENTS.REPLACE)
+    expect(command.target).toBe(target)
+    expect(command.items[0].name).toBe(name)
+  })
+
+  it('leaves the quantity unset so the old one carries over', () => {
+    const [command] = parseCommands('मैगी की जगह कुरकुरे', 'hi-IN')
+    expect(command.items[0].quantity).toBeNull()
+  })
+
+  it('reads a hindi quantity change', () => {
+    expect(parseCommand('दूध 3 कर दो', 'hi-IN')).toMatchObject({
+      intent: INTENTS.UPDATE_QUANTITY,
+      items: [{ name: 'दूध', quantity: 3 }],
+    })
+  })
+
+  it('does not mistake a plain hindi add for a swap', () => {
+    expect(parseCommand('दो सेब जोड़ो', 'hi-IN').intent).toBe(INTENTS.ADD)
+  })
+
+  it('still accepts the english phrasing in hindi mode', () => {
+    expect(parseCommand('replace milk with almond milk', 'hi-IN')).toMatchObject({
+      intent: INTENTS.REPLACE,
+      target: 'milk',
+    })
   })
 })

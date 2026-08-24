@@ -263,6 +263,27 @@ export function listReducer(state, action) {
     case 'command':
       return applyCommand(state, action.command)
 
+    // One utterance can carry several instructions; they apply in order and
+    // report as a single confirmation.
+    case 'commands': {
+      const messages = []
+      const next = action.commands.reduce((current, command) => {
+        const applied = applyCommand(current, command)
+        if (applied.feedback) messages.push(applied.feedback)
+        return applied
+      }, state)
+
+      if (messages.length < 2) return next
+      const failed = messages.some((message) => message.tone === 'error')
+      return {
+        ...next,
+        feedback: feedback(
+          failed ? 'error' : 'success',
+          messages.map((message) => message.message).join(' · '),
+        ),
+      }
+    }
+
     case 'toggle':
       return {
         ...state,

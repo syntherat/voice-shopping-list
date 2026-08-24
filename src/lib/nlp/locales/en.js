@@ -109,6 +109,9 @@ export default {
     between: ['between', 'from'],
   },
 
+  forwardReplace: [],
+  reversedReplace: ['instead of', 'in place of', 'rather than'],
+
   // Where the item sits relative to the verb.
   objectPosition: 'after',
 
@@ -127,6 +130,7 @@ export default {
   ],
 
   fillers: [
+    'instead of that', 'in its place', 'in place of that', 'in that place',
     'please', 'can you', 'could you', 'would you', 'i think', 'for me',
     'right now', 'as well', 'also', 'okay', 'ok',
   ],

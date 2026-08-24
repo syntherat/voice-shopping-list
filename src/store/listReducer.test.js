@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { matchKey } from '../lib/itemKey'
-import { parseCommand } from '../lib/nlp/parser'
+import { parseCommand, parseCommands } from '../lib/nlp/parser'
 import { applyCommand, initialState, listReducer } from './listReducer'
 
 const run = (state, text, locale = 'en-US') => applyCommand(state, parseCommand(text, locale))
@@ -244,5 +244,54 @@ describe('replacing onto an item already on the list', () => {
   it('still removes the item that was swapped out', () => {
     const state = run(runAll(['add kurkure', 'add maggi', 'add milk']), 'swap maggi for kurkure')
     expect(names(state)).toEqual(['kurkure', 'milk'])
+  })
+})
+
+describe('compound utterances', () => {
+  const runAllInOne = (state, text) =>
+    listReducer(state, { type: 'commands', commands: parseCommands(text) })
+
+  it('removes and adds in one go', () => {
+    const state = runAllInOne(runAll(['add milk', 'add bread']), 'remove milk and add almond milk')
+    expect(names(state)).toEqual(['bread', 'almond milk'])
+  })
+
+  it('reports both actions in one confirmation', () => {
+    const state = runAllInOne(runAll(['add milk']), 'remove milk and add almond milk')
+    expect(state.feedback).toMatchObject({
+      tone: 'success',
+      message: 'Removed milk · Added almond milk',
+    })
+  })
+
+  it('flags the batch as an error when one part fails', () => {
+    const state = runAllInOne(runAll(['add bread']), 'remove milk and add almond milk')
+    expect(state.feedback.tone).toBe('error')
+    expect(names(state)).toEqual(['bread', 'almond milk'])
+  })
+
+  it('applies the clauses in order', () => {
+    const state = runAllInOne(initialState, 'add milk and clear my list')
+    expect(state.items).toHaveLength(0)
+  })
+})
+
+describe('hindi swaps end to end', () => {
+  const swap = (state, text) =>
+    listReducer(state, { type: 'commands', commands: parseCommands(text, 'hi-IN') })
+
+  it('swaps one hindi item for another', () => {
+    const seeded = run(initialState, 'दो मैगी जोड़ो', 'hi-IN')
+    const state = swap(seeded, 'मैगी की जगह कुरकुरे डाल दो')
+    expect(names(state)).toEqual(['कुरकुरे'])
+  })
+
+  it('carries the old quantity over', () => {
+    const seeded = run(initialState, 'दो मैगी जोड़ो', 'hi-IN')
+    expect(swap(seeded, 'मैगी की जगह कुरकुरे').items[0].quantity).toBe(2)
+  })
+
+  it('reports a hindi item that is not on the list', () => {
+    expect(swap(runAll(['add bread']), 'मैगी की जगह कुरकुरे').feedback.tone).toBe('error')
   })
 })

@@ -5,7 +5,8 @@ export default {
 
   intents: {
     CLEAR: ['लिस्ट साफ करो', 'सूची साफ करो', 'लिस्ट खाली करो', 'सब हटा दो', 'सब कुछ हटा दो', 'सारा हटा दो'],
-    UPDATE_QUANTITY: ['बदल दो', 'बदलो'],
+    REPLACE: ['बदल दो', 'बदलो', 'बदल दीजिए', 'रिप्लेस करो'],
+    UPDATE_QUANTITY: ['कर दो', 'कर दीजिए'],
     SEARCH: ['ढूंढो', 'ढूंढ दो', 'खोजो', 'दिखाओ', 'सर्च करो'],
     REMOVE: ['नहीं चाहिए', 'हटा दो', 'हटाओ', 'निकाल दो', 'निकालो', 'मिटा दो', 'डिलीट करो'],
     ADD: ['जोड़ दो', 'जोड़ो', 'डाल दो', 'डालो', 'ऐड करो', 'खरीदना है', 'लेना है', 'लाना है', 'चाहिए'],
@@ -38,12 +39,17 @@ export default {
     between: [],
   },
 
+  // "मैगी की जगह कुरकुरे" — the item being replaced comes first.
+  forwardReplace: ['की जगह', 'के बदले', 'की बजाय'],
+  reversedReplace: [],
+
   // Where the item sits relative to the verb.
   objectPosition: 'before',
 
   rangeJoiners: ['और'],
   updateSeparators: [],
-  replaceSeparators: [],
+  // "मैगी को कुरकुरे से बदल दो" — को marks the target, से the replacement.
+  replaceSeparators: ['को'],
   conjunctions: ['और'],
   connectors: [],
 

@@ -50,3 +50,19 @@ describe('categorize', () => {
     expect(getCategory('nope').id).toBe('other')
   })
 })
+
+describe('hindi item names', () => {
+  it.each([
+    ['मैगी', 'pantry'],
+    ['कुरकुरे', 'snacks'],
+    ['दूध', 'dairy'],
+    ['बादाम दूध', 'dairy'],
+    ['ब्रेड', 'bakery'],
+    ['मुर्गी', 'meat'],
+    ['गाजर', 'produce'],
+    ['शैम्पू', 'personal'],
+    ['चाय', 'beverages'],
+  ])('puts %s in %s', (name, category) => {
+    expect(categorize(name)).toBe(category)
+  })
+})

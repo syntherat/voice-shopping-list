@@ -54,6 +54,51 @@ function matchIntent(text, locale) {
   return null
 }
 
+// Every verb occurrence in the utterance, longest phrase winning where two
+// overlap ("get rid of" beats "get").
+function findIntentPhrases(text, locale) {
+  const hits = []
+  for (const intent of INTENT_ORDER) {
+    for (const phrase of locale.intents[intent] || []) {
+      for (const match of text.matchAll(phraseRegExp(phrase, 'gu'))) {
+        const start = match.index + match[1].length
+        hits.push({ intent, start, end: start + phrase.length })
+      }
+    }
+  }
+
+  hits.sort((a, b) => a.start - b.start || b.end - b.start - (a.end - a.start))
+
+  const kept = []
+  for (const hit of hits) {
+    if (kept.some((other) => hit.start < other.end && hit.end > other.start)) continue
+    kept.push(hit)
+  }
+  return kept.sort((a, b) => a.start - b.start)
+}
+
+// "remove milk and add almond milk" is two commands, while "add milk, eggs and
+// bread" is one. The difference is a second verb. Verb-first languages start a
+// clause at the verb; verb-final ones end it there.
+export function splitClauses(text, locale) {
+  const hits = findIntentPhrases(text, locale)
+  if (hits.length < 2) return [text]
+
+  const boundaries =
+    locale.objectPosition === 'before'
+      ? hits.slice(0, -1).map((hit) => hit.end)
+      : hits.slice(1).map((hit) => hit.start)
+
+  const clauses = []
+  let from = 0
+  for (const boundary of boundaries) {
+    clauses.push(text.slice(from, boundary).trim())
+    from = boundary
+  }
+  clauses.push(text.slice(from).trim())
+  return clauses.filter(Boolean)
+}
+
 function splitSegments(text, locale) {
   if (!locale.conjunctions.length) {
     return text.split(',').map((part) => part.trim()).filter(Boolean)
@@ -241,6 +286,41 @@ function buildReplace(rest, locale) {
   return null
 }
 
+// A swap can be marked without a swap verb, and the marker decides which
+// operand is which: "almond milk instead of milk" names the replacement first,
+// "मैगी की जगह कुरकुरे" names the target first.
+function buildMarkedSwap(rest, before, locale) {
+  const read = (targetText, nameText) => {
+    const target = cleanName(targetText, locale)
+    const { quantity, unit, rest: remainder } = extractQuantityAndUnit(nameText, locale)
+    const name = cleanName(remainder, locale)
+    return target && name ? { target, items: [{ name, quantity, unit }] } : null
+  }
+
+  for (const phrase of locale.forwardReplace) {
+    const inline = rest.match(new RegExp('^(.+)\\s' + escapeRegExp(phrase) + '\\s(.+)$', 'u'))
+    if (!inline) continue
+    const found = read(inline[1], inline[2])
+    if (found) return found
+  }
+
+  for (const phrase of locale.reversedReplace) {
+    const inline = rest.match(new RegExp('^(.+)\\s' + escapeRegExp(phrase) + '\\s(.+)$', 'u'))
+    if (inline) {
+      const found = read(inline[2], inline[1])
+      if (found) return found
+    }
+
+    if (!before) continue
+    const ahead = before.match(new RegExp('(?:^|\\s)' + escapeRegExp(phrase) + '\\s(.+)$', 'u'))
+    if (ahead) {
+      const found = read(ahead[1], rest)
+      if (found) return found
+    }
+  }
+  return null
+}
+
 export function parseCommand(input, localeTag = 'en-US') {
   const locale = resolveLocale(localeTag)
   const raw = typeof input === 'string' ? input : ''
@@ -317,11 +397,30 @@ export function parseCommand(input, localeTag = 'en-US') {
     return { ...result, intent, confidence: 0.3 }
   }
 
+  if (intent === INTENTS.ADD) {
+    const swapped = buildMarkedSwap(rest, match?.before, locale)
+    if (swapped) return { ...result, intent: INTENTS.REPLACE, ...swapped, confidence: 0.9 }
+  }
+
   const items = buildItems(splitSegments(rest, locale), locale)
   let confidence = explicit ? 0.9 : 0.5
   if (!items.length) confidence = 0.25
 
   return { ...result, intent, items, confidence }
+}
+
+// An utterance can carry more than one instruction. Clauses that parse to
+// nothing are dropped, unless that would leave nothing at all.
+export function parseCommands(input, localeTag = 'en-US') {
+  const locale = resolveLocale(localeTag)
+  const clauses = splitClauses(normalize(input), locale)
+  if (clauses.length < 2) return [parseCommand(input, localeTag)]
+
+  const commands = clauses
+    .map((clause) => parseCommand(clause, localeTag))
+    .filter((command) => command.intent !== INTENTS.UNKNOWN && command.confidence >= 0.4)
+
+  return commands.length ? commands : [parseCommand(input, localeTag)]
 }
 
 export { INTENTS }
